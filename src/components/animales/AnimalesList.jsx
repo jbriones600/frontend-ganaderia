@@ -1,26 +1,31 @@
-// src/components/animales/AnimalesList.jsx (ACTUALIZADO FASE 9)
+// src/components/animales/AnimalesList.jsx (ACTUALIZADO FASE 11)
 import { useEffect, useState, useCallback } from 'react';
 import api from '../../api/axiosConfig';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Typography, CircularProgress, Box, Chip, Button,
-    IconButton, Tooltip, Stack // <-- Importamos Stack para agrupar botones
+    IconButton, Tooltip, Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit'; // <-- NUEVO FASE 9: Icono de lápiz
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility'; // <-- NUEVO FASE 11: Icono de ojo
 import AnimalFormDialog from './AnimalFormDialog';
+import AnimalDetailsDialog from './AnimalDetailsDialog'; // <-- NUEVO FASE 11: Importar el diálogo de detalles
 
 function AnimalesList() {
     const [animales, setAnimales] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [openDialog, setOpenDialog] = useState(false);
     
-    // NUEVO FASE 9: Estado para guardar el animal que se va a editar
-    const [selectedAnimal, setSelectedAnimal] = useState(null);
+    // Estados para el diálogo de Crear/Editar
+    const [openFormDialog, setOpenFormDialog] = useState(false);
+    const [selectedAnimalForEdit, setSelectedAnimalForEdit] = useState(null);
+
+    // NUEVO FASE 11: Estados para el diálogo de Detalles
+    const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+    const [selectedAnimalForDetails, setSelectedAnimalForDetails] = useState(null);
 
     const fetchAnimales = useCallback(async () => {
-        // ... (código de fetchAnimales igual que antes) ...
         setLoading(true);
         try {
             const response = await api.get('/animales');
@@ -35,24 +40,25 @@ function AnimalesList() {
 
     useEffect(() => { fetchAnimales(); }, [fetchAnimales]);
 
-    // Renombramos la función para que sea más genérica
-    const handleAnimalSaved = () => {
-        fetchAnimales();
-    };
+    const handleAnimalSaved = () => { fetchAnimales(); };
 
-    // NUEVO FASE 9: Funciones para abrir el modal en modo Crear o Editar
+    // Funciones para el formulario (Crear/Editar)
     const handleOpenCreate = () => {
-        setSelectedAnimal(null); // Aseguramos que no haya animal seleccionado
-        setOpenDialog(true);
+        setSelectedAnimalForEdit(null);
+        setOpenFormDialog(true);
+    };
+    const handleOpenEdit = (animal) => {
+        setSelectedAnimalForEdit(animal);
+        setOpenFormDialog(true);
     };
 
-    const handleOpenEdit = (animal) => {
-        setSelectedAnimal(animal); // Guardamos el animal completo que se va a editar
-        setOpenDialog(true);
+    // NUEVO FASE 11: Función para abrir detalles
+    const handleOpenDetails = (animal) => {
+        setSelectedAnimalForDetails(animal);
+        setOpenDetailsDialog(true);
     };
 
     const handleDelete = async (id, arete) => {
-        // ... (código de handleDelete igual que antes) ...
          if (window.confirm(`¿Estás seguro de que deseas dar de baja al animal con arete ${arete}?`)) {
             try {
                 await api.delete(`/animales/${id}`);
@@ -71,14 +77,12 @@ function AnimalesList() {
             <TableContainer component={Paper} sx={{ marginTop: 2 }}>
                 <Box sx={{ padding: 2, backgroundColor: '#f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6" component="div">Inventario de Animales Activos ({animales.length})</Typography>
-                    {/* Usamos la nueva función handleOpenCreate */}
                     <Button variant="contained" color="success" startIcon={<AddIcon />} onClick={handleOpenCreate}>
                         Nuevo Animal
                     </Button>
                 </Box>
                 
                 <Table sx={{ minWidth: 650 }} aria-label="tabla de animales">
-                    {/* ... (TableHead igual que antes) ... */}
                     <TableHead>
                         <TableRow sx={{ backgroundColor: '#e0e0e0' }}>
                             <TableCell><strong>Arete</strong></TableCell>
@@ -93,7 +97,6 @@ function AnimalesList() {
                     <TableBody>
                         {animales.map((animal) => (
                             <TableRow key={animal.animal_id} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: '#f9f9f9' } }}>
-                                {/* ... (Celdas de datos iguales que antes) ... */}
                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold', color: '#1976d2' }}>{animal.codigo_arete}</TableCell>
                                 <TableCell>{animal.nombre_alias || '-'}</TableCell>
                                 <TableCell>{animal.especie_nombre}</TableCell>
@@ -101,14 +104,17 @@ function AnimalesList() {
                                 <TableCell align="center"><Chip label={animal.sexo === 'H' ? 'Hembra' : 'Macho'} color={animal.sexo === 'H' ? 'secondary' : 'primary'} size="small" variant="outlined"/></TableCell>
                                 <TableCell>{animal.ubicacion_nombre || 'Sin asignar'}</TableCell>
                                 
-                                {/* NUEVO FASE 9: Columna de Acciones con Editar y Eliminar */}
                                 <TableCell align="center">
                                     <Stack direction="row" spacing={1} justifyContent="center">
+                                        {/* NUEVO FASE 11: Botón de Ver Detalles */}
+                                        <Tooltip title="Ver Detalles e Historial">
+                                            <IconButton color="info" onClick={() => handleOpenDetails(animal)}>
+                                                <VisibilityIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                        
                                         <Tooltip title="Editar">
-                                            <IconButton 
-                                                color="primary" 
-                                                onClick={() => handleOpenEdit(animal)} // Pasamos el objeto animal completo
-                                            >
+                                            <IconButton color="primary" onClick={() => handleOpenEdit(animal)}>
                                                 <EditIcon />
                                             </IconButton>
                                         </Tooltip>
@@ -126,12 +132,19 @@ function AnimalesList() {
                 </Table>
             </TableContainer>
 
-            {/* NUEVO FASE 9: Pasamos la prop animalToEdit al formulario */}
+            {/* Diálogo de Formulario (Crear/Editar) */}
             <AnimalFormDialog 
-                open={openDialog} 
-                onClose={() => setOpenDialog(false)} 
-                onAnimalSaved={handleAnimalSaved} // Nombre actualizado de la prop
-                animalToEdit={selectedAnimal}     // <-- ¡AQUÍ PASAMOS EL ANIMAL A EDITAR!
+                open={openFormDialog} 
+                onClose={() => setOpenFormDialog(false)} 
+                onAnimalSaved={handleAnimalSaved}
+                animalToEdit={selectedAnimalForEdit}
+            />
+
+            {/* NUEVO FASE 11: Diálogo de Detalles */}
+            <AnimalDetailsDialog
+                open={openDetailsDialog}
+                onClose={() => setOpenDetailsDialog(false)}
+                animal={selectedAnimalForDetails}
             />
         </>
     );

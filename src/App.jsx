@@ -8,7 +8,7 @@ function App() {
     <Container maxWidth="lg">
       <Box my={4}>
         <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
-          Sistema de Gestión Ganadera
+          Sistema de Gestión Ganadera jbriones
         </Typography>
         
         {/* Aquí cargamos la lista profesional */}
